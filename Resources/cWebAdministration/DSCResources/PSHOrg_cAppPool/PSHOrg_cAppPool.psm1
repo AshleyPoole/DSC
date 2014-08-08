@@ -177,11 +177,17 @@ function Set-TargetResource
                 $UpdateNotRequired = $false
                 & $env:SystemRoot\system32\inetsrv\appcmd.exe set apppool $Name /processModel.identityType:$identityType
             }
+            
             #update userName if required
-            if($identityType -eq "SpecificUser" -and $PoolConfig.add.processModel.userName -ne $userName){
-                $UpdateNotRequired = $false
-                & $env:SystemRoot\system32\inetsrv\appcmd.exe set apppool $Name /processModel.userName:$userName
+            #Updated 8/8/2014 - mhatch73@gmail.com - update only if the username is specified in the config
+            if(!([string]::IsNullOrEmpty($userName))){
+                    if($identityType -eq "SpecificUser" -and $PoolConfig.add.processModel.userName -ne $userName){
+                     Write-Verbose "updating User Name to $userName"
+                    $UpdateNotRequired = $false
+                    & $env:SystemRoot\system32\inetsrv\appcmd.exe set apppool $Name /processModel.userName:$userName
+                }
             }
+            
             #update password if required
             if($identityType -eq "SpecificUser" -and $Password){
                 $clearTextPassword = $Password.GetNetworkCredential().Password
@@ -394,12 +400,16 @@ function Test-TargetResource
                 Write-Verbose("identityType of AppPool $Name does not match the desired state.");
                 break
             }
-            #Check userName 
-            if($PoolConfig.add.processModel.userName -ne $userName){
-                $DesiredConfigurationMatch = $false
-                Write-Verbose("userName of AppPool $Name does not match the desired state.");
-                break
+            #Check userName
+            #Updated 8/8/2014 - mhatch73@gmail.com - check only if the username is set in the config
+            if (!([String]::IsNullOrEmpty($username))){
+                if($PoolConfig.add.processModel.userName -ne $userName){
+                    $DesiredConfigurationMatch = $false
+                    Write-Verbose("userName of AppPool $Name does not match the desired state.");
+                    break
+                }
             }
+            
             #Check password 
             if($identityType -eq "SpecificUser" -and $Password){
                 $clearTextPassword = $Password.GetNetworkCredential().Password
