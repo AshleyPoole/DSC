@@ -77,7 +77,7 @@ function Get-TargetResource
                                         userName = $PoolConfig.add.processModel.userName;
                                         password = $AppPoolCred
                                         loadUserProfile = $PoolConfig.add.processModel.loadUserProfile;
-
+					Enabled32Bit = $PoolConfig.Add.Enable32BitAppOnWin64;
                                     }
         
         return $getTargetResourceResult;
@@ -118,7 +118,11 @@ function Set-TargetResource
         $Password,
 
         [ValidateSet("true","false")]
-        [string]$loadUserProfile = "true"
+        [string]$loadUserProfile = "true",
+        
+        [ValidateSet("true","false")]
+	[System.String]
+	$Enable32Bit = "false"
 
     )
  
@@ -192,7 +196,14 @@ function Set-TargetResource
                 $UpdateNotRequired = $false
                 & $env:SystemRoot\system32\inetsrv\appcmd.exe set apppool $Name /processModel.loadUserProfile:$loadUserProfile
             }
-
+	
+	    #update Enable32bit
+            if($PoolConfig.add.enable32BitAppOnWin64 -ne $Enable32Bit){
+                Write-Verbose "Updating Enable32Bit to $Enable32Bit"
+                $UpdateNotRequired = $false
+                & $env:SystemRoot\System32\inetsrv\appcmd.exe set apppool $Name /enable32BitAppOnWin64:$Enable32Bit
+            }
+		
             if($UpdateNotRequired)
             {
                 Write-Verbose("AppPool $Name already exists and properties do not need to be udpated.");
@@ -316,7 +327,11 @@ function Test-TargetResource
         $Password,
 
         [ValidateSet("true","false")]
-        [string]$loadUserProfile = "true"
+        [string]$loadUserProfile = "true",
+        
+        [ValidateSet("true","false")]
+	[System.String]
+	$Enable32Bit = "false"
     )
  
     $DesiredConfigurationMatch = $true
@@ -399,6 +414,13 @@ function Test-TargetResource
             if($PoolConfig.add.processModel.loadUserProfile -ne $loadUserProfile){
                 $DesiredConfigurationMatch = $false
                 Write-Verbose("loadUserProfile of AppPool $Name does not match the desired state.");
+                break
+            }
+            
+            #check enabled32BitAppOnWin64
+            if($PoolConfig.add.enable32BitAppOnWin64 -ne $Enable32Bit){
+                $DesiredConfigurationMatch = $false
+                Write-Verbose("enable32BitAppOnWin64 of AppPool $Name does not match the desired state.");
                 break
             }
         }
